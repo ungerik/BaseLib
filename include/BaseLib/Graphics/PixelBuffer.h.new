@@ -1,0 +1,195 @@
+/******************************************************************************
+                                      
+Developed and Copyright (c) by       
+                                      
+Erik Unger          
+                                      
+Contact: mail@ungerik.net
+                                      
+******************************************************************************/
+
+#ifndef BaseLib_Graphics_PixelBuffer_h
+#define BaseLib_Graphics_PixelBuffer_h
+
+
+
+#include "BaseLib/Buffers/BinaryMemBuffer.h"
+#include "BaseLib/Reflection/Object.h"
+#include "BaseLib/intern/Windows.h"
+#include "BaseLib/Graphics/Pixel.h"
+
+
+
+namespace BaseLib {
+	namespace Streams {
+		class OutputStream;
+	}
+}
+
+
+
+namespace BaseLib {
+namespace Graphics {
+
+
+
+using BaseLib::Streams::OutputStream;
+
+
+
+typedef bool (*ProgressCallback)(float progress);
+struct BTHeader;
+
+
+
+class BL_EXPORT PixelBuffer : public BaseLib::Reflection::Object {
+public:
+
+	BL_DECLARE_REFLECTION_BASELIB_BASE_CLASS(BaseLib::Graphics::PixelBuffer);
+
+	PixelBuffer();
+	PixelBuffer(const PixelFormat& format, int newWidth, int newHeight = 1, int newDepth = 1, int newBitsPerLine = 0, bool isResizeable = true, void* usePixels = NULL);
+	PixelBuffer(const PixelBuffer& other);
+	PixelBuffer(const String& fileName);
+	virtual ~PixelBuffer();
+
+	PixelBuffer& operator =(const PixelBuffer& right);
+
+	bool isFormatEqual(const PixelBuffer& other) const;
+
+	inline bool isResizeable() const
+	{
+		return resizeable;
+	}
+
+	inline int getBytesPerLine() const
+	{
+		return bytesPerLine;
+	}
+
+	inline int getByteCount() const
+	{
+		return bytesPerLine * height * depth;
+	}
+
+	inline bool isBytesPerLinePixelAligned() const
+	{
+		return pixelFormat.totalBits * width == bytesPerLine * 8;
+	}
+
+	inline int getWidth() const
+	{
+		return width;
+	}
+	inline int getHeight() const 
+	{
+		return height;
+	}
+	inline int getDepth() const
+	{
+		return depth;
+	}
+
+	inline int getPixelCount() const
+	{
+		return width * height * depth;
+	}
+
+	void resize(int newWidth, int newHeight = 1, int newDepth = 1, int newBytesPerLine = 0);
+	void resize(const PixelFormat& newPixelFormat, int newWidth, int newHeight = 1, int newDepth = 1, int newBytesPerLine = 0);
+
+	inline const PixelFormat& getPixelFormat() const
+	{
+		return pixelFormat;
+	}
+	void setPixelFormat(const PixelFormat& newPixelFormat);
+
+	String getPixelFormatAsString() const;
+	void setPixelFormat(const String& newPixelFormat);
+
+	inline void* getBufferPointer() { return buffer.getPointer(); }
+	inline const void* getBufferPointer() const { return buffer.getPointer(); }
+
+	inline PixelIterator getPixelIterator(int x = 0, int y = 0, int z = 0)
+	{
+		return PixelIterator(pixelFormat, getBufferPointer(), bytesPerLine*8 * (y + z*height) + x * pixelFormat.totalBits);
+	}
+
+	inline ConstPixelIterator getPixelIterator(int x = 0, int y = 0, int z = 0) const
+	{
+		return ConstPixelIterator(pixelFormat, const_cast<void*>(getBufferPointer()), bytesPerLine*8 * (y + z*height) + x * pixelFormat.totalBits);
+	}
+
+	Pixel pixel(int x = 0, int y = 0, int z = 0);
+	const Pixel pixel(int x = 0, int y = 0, int z = 0) const;
+
+	void fillWithColor(const ByteColor& fillColor);
+	void fillWithColor(const FloatColor& fillColor);
+	void fillWithColor(int red, int green, int blue, int alpha = 255);
+	void fillWithColor(float red, float green, float blue, float alpha = 1.0f);
+	void fillWithColor(const uint8 colorComponents[4]);
+	void fillWithColor(const float colorComponents[4]);
+
+	void swapRedAndBlue(bool modifyPixelFormat = false);
+
+	void filterBilinearSizeMinusOne();
+	void filterBilinearSizeMinusOne(const PixelBuffer& srcPixelBuffer);
+
+	void copyFrom(const PixelBuffer& source, int srcX = 0, int srcY = 0, int srcZ = 0, int srcWidth = 0, int srcHeight = 0, int srcDepth = 0, int dstX = 0, int dstY = 0, int dstZ = 0);
+
+	void getColorRange(int& redMin, int& greenMin, int& blueMin, int& alphaMin, int& redMax, int& greenMax, int& blueMax, int& alphaMax, int x = 0, int y = 0, int z = 0, int width = 0, int height = 0, int depth = 0) const;
+	void getColorRange(float& redMin, float& greenMin, float& blueMin, float& alphaMin, float& redMax, float& greenMax, float& blueMax, float& alphaMax, int x = 0, int y = 0, int z = 0, int width = 0, int height = 0, int depth = 0) const;
+	
+	void getColorRange(int& min, int& max, bool lookAtColor, bool lookAtAlpha, int x = 0, int y = 0, int z = 0, int width = 0, int height = 0, int depth = 0) const;
+	void getColorRange(float& min, float& max, bool lookAtColor, bool lookAtAlpha, int x = 0, int y = 0, int z = 0, int width = 0, int height = 0, int depth = 0) const;
+
+	void changeColorRangeInt(int redDelta, int greenDelta, int blueDelta, int alphaDelta, float redScale, float greenScale, float blueScale, float alphaScale, int x = 0, int y = 0, int z = 0, int width = 0, int height = 0, int depth = 0);
+	void changeColorRangeFloat(float redDelta, float greenDelta, float blueDelta, float alphaDelta, float redScale, float greenScale, float blueScale, float alphaScale, int x = 0, int y = 0, int z = 0, int width = 0, int height = 0, int depth = 0);
+
+	bool loadFromFile(const String& fileName);
+	bool saveAsFile(const String& fileName) const;
+
+	bool loadFromJPEG(const String& fileName);
+	bool saveAsJPEG(const String& fileName, float quality = 1.0f, bool encodeProgressive = false) const;
+	bool loadFromPNG(const String& fileName);
+	bool saveAsPNG(const String& fileName, bool encodeProgressive = false, float compressionLevel = 1.0) const;
+	bool loadFromTGA(const String& fileName);
+	bool saveAsTGA(const String& fileName) const;
+	bool loadFromPBF(const String& fileName);
+	bool saveAsPBF(const String& fileName) const;
+	bool loadFromBT(const String& fileName, BTHeader& header);
+	bool saveAsBT(const String& fileName) const;
+
+	void dumpAsSourceCode(const String& name, OutputStream& outputStream) const;
+
+#ifdef BL_PLATFORM_WIN32
+	HBITMAP createWin32Bitmap() const;
+	HICON createWin32Icon(HINSTANCE hInstance) const;
+	HCURSOR createWin32Cursor(HINSTANCE hInstance, int hotSpotX, int hotSpotY) const;
+#endif
+
+protected:
+
+	int width;
+	int height;
+	int depth;
+	int bytesPerLine;
+	bool resizeable;
+
+	PixelFormat pixelFormat;
+
+	BaseLib::Buffers::BinaryMemBuffer buffer;
+
+public:
+
+	ProgressCallback progressCallback;
+};
+
+
+
+} // namespace Graphics
+} // namespace BaseLib
+
+
+
+#endif // #ifndef BaseLib_Graphics_PixelBuffer_h

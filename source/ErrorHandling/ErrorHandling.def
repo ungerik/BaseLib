@@ -1,0 +1,42 @@
+;LIBRARY	ErrorHandling
+
+EXPORTS
+	handleArgumentError			@1
+	handleLogicError			@2
+	handleResultError			@3
+	handleIOError				@4
+	
+	setArgumentErrorHandler		@5
+	setLogicErrorHandler		@6
+	setResultErrorHandler		@7
+	setIOErrorHandler			@8
+	
+	getArgumentErrorHandler		@9
+	getLogicErrorHandler		@10
+	getResultErrorHandler		@11
+	getIOErrorHandler			@12
+	
+	pushArgumentErrorHandler	@13
+	pushLogicErrorHandler		@14
+	pushResultErrorHandler		@15
+	pushIOErrorHandler			@16
+	
+	popArgumentErrorHandler		@17
+	popLogicErrorHandler		@18
+	popResultErrorHandler		@19
+	popIOErrorHandler			@20
+	
+	peakLastError				@21
+	getLastError				@22
+	getErrorCount				@23
+	getErrorRingBufferSize		@24
+	setErrorRingBufferSize		@25
+	ignoreError					@26
+	saveErrorInRingbuffer		@27
+	pushErrorOnStack			@28
+	
+	throwArgumentException		@29
+	throwLogicException			@30
+	throwResultException		@31
+	throwIOException			@32
+
